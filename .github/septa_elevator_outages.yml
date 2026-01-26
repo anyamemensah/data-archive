@@ -1,0 +1,38 @@
+name: SEPTA Elevator Outage Tracking
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */2 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  run-logger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Run Tracker
+        run: uv run ./scripts/septa_elevator_outages.py
+
+      - name: Commit and Push Data
+        run: |
+          run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add ./data/septa_elevator_outages/septa_elevator_outage_history.csv
+          # Only commit if there are actually changes to the CSV
+          if ! git diff --cached --quiet; then
+            git commit -m "data: log SEPTA elevator outage status $(date -u +'%Y%m%dT%H%M%SZ')"
+            git push
+          else
+            echo "No changes detected. Skipping commit."
+          fi
